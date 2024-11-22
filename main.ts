@@ -36,7 +36,14 @@ interface Person {
 
 export interface PersonInfo {
   // TODO: define type
+  name: string;
+  height: string;
+  gender: "male" | "female" | "divers";
+  homeworld: string;
+  films: [];
 }
+
+export interface Film
 
 // Task 1: write a function using promise based fetch api
 type PromiseBasedFunction = () => Promise<PersonInfo>;
