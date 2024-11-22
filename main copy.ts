@@ -53,13 +53,8 @@ export interface Film {
 type PromiseBasedFunction = () => Promise<PersonInfo>;
 export const getLukeSkywalkerInfo: PromiseBasedFunction = () => {
   return fetch("https://swapi.dev/api/people/1").then((response: Response) => {
-    return response.json().then(async(person: Person) => {
+    return response.json().then((person: Person) => {
       // TODO: load other stuff and return LukeSkywalkerInfo
-      const homeWorldResponse = await fetch(person.homeworld);
-      const homeworldData = await homeWorldResponse.json();
-
-      const filePromises = person.films.map(filmUrl => fetch(filmUrl).then(res => res.json()));
-      const filmsData = await Promise.all(filePromises); 
       return {} as PersonInfo;
     });
   });
