@@ -60,7 +60,16 @@ export const getLukeSkywalkerInfo: PromiseBasedFunction = () => {
 
       const filePromises = person.films.map(filmUrl => fetch(filmUrl).then(res => res.json()));
       const filmsData = await Promise.all(filePromises); 
-      return {} as PersonInfo;
+      return {
+        name: person.name,
+        height: person.height,
+        gender: person.gender,
+        films: filmsData.map((film: any) => ({
+          title: film.title,
+          director: film.director,
+          release_date: film.release_date
+        }))
+      } as PersonInfo;
     });
   });
 };
