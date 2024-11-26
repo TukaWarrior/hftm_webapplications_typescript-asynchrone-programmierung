@@ -1,5 +1,5 @@
 import fetch, { Response } from "node-fetch";
-import { map, mergeMap } from "rxjs/operators";
+import { map, mergeMap, toArray } from "rxjs/operators";
 import { get } from "./utils";
 import { of } from "rxjs";
 
@@ -40,13 +40,17 @@ export interface PersonInfo {
   height: string;
   gender: "male" | "female" | "divers";
   homeworld: string;
-  films: [];
+  films: Film[];
 }
 
 export interface Film {
   title: string;
   director: string;
   release_date: string;
+}
+
+export interface Homeworld {
+  name: string;
 }
 
 // Task 1: write a function using promise based fetch api
@@ -58,12 +62,13 @@ export const getLukeSkywalkerInfo: PromiseBasedFunction = () => {
       const homeWorldResponse = await fetch(person.homeworld);
       const homeworldData = await homeWorldResponse.json();
 
-      const filePromises = person.films.map(filmUrl => fetch(filmUrl).then(res => res.json()));
-      const filmsData = await Promise.all(filePromises); 
+      const filmPromises = person.films.map(filmUrl => fetch(filmUrl).then(res => res.json()));
+      const filmsData = await Promise.all(filmPromises); 
       return {
         name: person.name,
         height: person.height,
         gender: person.gender,
+        homeworld: homeworldData.name,
         films: filmsData.map((film: any) => ({
           title: film.title,
           director: film.director,
@@ -79,17 +84,57 @@ export const getLukeSkywalkerInfo: PromiseBasedFunction = () => {
 type AsyncBasedFunction = () => Promise<PersonInfo>;
 export const getLukeSkywalkerInfoAsync: PromiseBasedFunction = async () => {
   const response = await fetch("https://swapi.dev/api/people/1");
+  const person = await response.json();
+  const homeWorldResponse = await fetch(person.homeworld);
+  const homeWorldData = await homeWorldResponse.json();
+
+  const filmPromises = person.films.map((filmUrl: fetch.RequestInfo) => fetch(filmUrl).then(res => res.json()));
+  const filmsData = await Promise.all(filmPromises);
   // TODO: load other stuff and return LukeSkywalkerInfo
-  return (await {}) as PersonInfo;
+  return (await {
+    name: person.name,
+        height: person.height,
+        gender: person.gender,
+        homeworld: homeWorldData.name,
+        films: filmsData.map((film: any) => ({
+          title: film.title,
+          director: film.director,
+          release_date: film.release_date
+        }))
+  }) as PersonInfo;
 };
 
 // Task 3: write a function using Observable based api
 // see also: https://rxjs.dev/api/index/function/forkJoin
+
+
 export const getLukeSkywalkerInfoObservable = () => {
   return get<Person>("https://swapi.dev/api/people/1").pipe(
     mergeMap((person: Person) => {
-      // TODO: load other stuff and return LukeSkywalkerInfo
-      return of({} as PersonInfo);
+      const homeworld$ = get<Homeworld>(person.homeworld);
+      const films$ = of(person.films).pipe(
+        mergeMap(films => films),
+        mergeMap(film => get<Film>(film)),
+        toArray()
+      );
+      return of(person).pipe(
+        mergeMap(person => homeworld$.pipe(
+          map(homeworld => ({ ...person, homeworld: homeworld.name }))  
+        )),
+        mergeMap(person => films$.pipe(
+          map(films => ({
+            name: person.name,
+            height: person.height,
+            gender: person.gender,
+            homeworld: person.homeworld,
+            films: films.map((film: Film) => ({
+              title: film.title,
+              director: film.director,
+              release_date: film.release_date
+            }))
+          } as PersonInfo))
+        ))
+      );
     })
   );
 };
